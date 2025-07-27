@@ -1,0 +1,5 @@
+# Sample versions file for Ghruul, see readme.md for explanation
+update;user;repository;version;type;pattern;custom_script
+Y;derailed;k9s;--;deb;linux_amd64.deb;--
+N;Mastermindzh;tidal-hifi;--;deb;amd64.deb;--
+Y;yt-dlp;yt-dlp;--;binary;--;custom_scripts/yt-dlp.sh

@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+
+G="\033[1;32m" # green
+C="\033[1;36m" # cyan
+R="\033[1;31m" # red
+Y="\033[1;33m" # yellow
+B="\033[1;34m" # blue
+D="\033[1;90m" # gray
+NC="\033[0m" # no color
+
+up="${G}[+]${NC}"
+noup="${C}[-]${NC}"
+err="${R}[×]${NC}"
+warn="${Y}[!]${NC}"
+info="${B}[i]${NC}"
+debug="${D}[d]${NC}"
+
+echo -e "$info Starting \033[1mGhruul\033[0m update script..."
+
+# versions files
+# returns error if file not found
+versions="$1"
+if ! [ -f "$versions" ]; then
+  echo -e "$err Versions file does not exist at: $versions. Try different path?" && exit
+else
+  echo -e "$up Located versions file at: $versions"
+fi
+
+versions_clean="$versions.clean"
+versions_tmp="$versions.tmp"
+
+rm -f "$versions_clean" "$versions_tmp" && touch "$versions_clean" "$versions_tmp"
+
+while read -r line; do
+  if [[ "$line" =~ ^\#.* ]]; then # skip comments
+    echo "$line" >> "$versions_clean"
+    echo "$line" >> "$versions_tmp"
+    continue
+  fi
+
+  # shellcheck disable=SC2207
+  entry=($(echo "$line" | tr ";" " "))
+  update=${entry[0]}
+  if [[ "$update" == "update" ]]; then # skip header
+    echo "$line" >> "$versions_clean"
+    echo "$line" >> "$versions_tmp"
+    continue
+  fi
+
+  # proceed with updates
+  owner=${entry[1]}
+  repo=${entry[2]}
+  installed_version=${entry[3]}
+  type=${entry[4]}
+  pattern=${entry[5]}
+  custom_script=${entry[6]}
+
+  # add line without version to clean file
+  line_clean="$update;$owner;$repo;--;$type;$pattern;$custom_script"
+  echo "$line_clean" >> "$versions_clean"
+
+  pref=$owner"/"$repo
+  if [[ "$update" == "N" ]]; then # skip if update for this package was disabled by user
+    echo -e "$noup \033[1mSkipping update\033[0m for $pref, as defined in versions file."
+    echo "$line" >> "$versions_tmp"
+    continue
+  fi
+
+  # install new versions if available
+  # modify versions file if applicable
+  status="none"
+  echo -e "$info $pref Installed version: $installed_version"
+  api_latest_release="https://api.github.com/repos/$pref/releases/latest"
+  response=$(curl -sL \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "$api_latest_release")
+  latest_version=$(echo "$response" | jq -r .tag_name)
+  if [[ -z $latest_version ]]; then
+    echo -e "$warn Could not get the latest version value for : $pref."
+    if [[ $2 == "-debug" ]]; then
+      echo -e "$debug API response: $response"
+    fi
+  else
+    echo -e "$info $pref Latest version: $latest_version"
+    if [[ "$installed_version" == "$latest_version" ]]; then
+      status="no_update"
+    else
+      echo -e "$up \033[1mUpdate available\033[0m for: $pref. Identified type is: >$type<."
+      if [[ "$type" == "deb" || "$type" == "rpm" ]]; then
+        filter=".assets[] | select(.[\"browser_download_url\"] | test(\"$pattern\")?)"
+        url=$(echo "$response" | jq "$filter" | jq -r .browser_download_url)
+        if [[ -z $url ]]; then
+          echo -e "$warn Could not find download URL for: $pref"
+          if [[ $2 == "-debug" ]]; then
+            echo -e "$debug API response: $response"
+          fi
+        else
+          echo -e "$up Download URL: $url" && curl -LO "$url"
+          # shellcheck disable=SC2181
+          if [[ "$?" != "0" ]]; then
+            echo -e "$warn Could not download update from URL: $url"
+          else
+            # shellcheck disable=SC2207
+            segments=($(echo "$url" | tr "/" " "))
+            install_file=${segments[-1]} # last element = downloaded file name
+            if [[ "$type" == "deb" ]]; then
+              apt install -y ./"$install_file"
+            elif [[ "$type" == "rpm" ]]; then
+              dnf install -y ./"$install_file"
+            fi
+            if [[ "$?" != "0" ]]; then
+              echo -e "$warn Could not install $install_file (type: >$type<)."
+            else
+              rm -f "$install_file"
+              status="success"
+            fi
+          fi
+        fi
+      else
+        echo -e "$up \033[1mExecuting custom script:\033[0m $custom_script" && sh -c "$custom_script"
+        # shellcheck disable=SC2181
+        if [[ "$?" != "0" ]]; then
+          echo -e "$warn Could not run custom script $custom_script."
+        else
+          status="success"
+        fi
+      fi # TODO add other type actions
+    fi
+  fi
+  if [[ $status == "success" ]]; then
+    echo -e "$up Successfully updated $pref."
+    newline="$update;$owner;$repo;$latest_version;$type;$pattern;$custom_script"
+    echo "$newline" >> "$versions_tmp"
+  else
+    if [[ $status == "no_update" ]]; then
+      echo -e "$noup \033[1mNo updates available\033[0m for: $pref. Try again later?"
+    elif [[ $status == "none" ]]; then
+      echo -e "$err Update process failed for $pref. Probably an error has occurred. Check messages above."
+    fi
+    echo "$line" >> "$versions_tmp"
+  fi
+done < "$versions"
+
+rm -f "$versions" \
+ && mv "$versions_tmp" "$versions" \
+ && chmod 666 "$versions" "$versions_clean"
