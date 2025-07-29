@@ -40,7 +40,7 @@ Following data is used to create an entry:
 2. GitHub owner of the repository (here: `derailed`)
 3. Name of the repository (here: `k9s`)
 4. Installed version: **do not fill**, will be updated on first install
-5. Type of the package (currently only `deb` or `npm` are supported)
+5. Type of the package (currently only `deb` or `rpm` are supported)
 6. Pattern to look for in the package file name to install (see _"How to define a file name pattern"_)
 7. Custom script path (see _"Custom scripts"_)
 
