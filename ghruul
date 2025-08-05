@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+set -eo pipefail
+
+debug_mode="n"
+if [[ -n "$2" && "$2" == "-debug" ]]; then
+  echo "$2"
+  echo $debug_mode
+  debug_mode="y"
+  if [[ -n "$3" && "$3" == "-x" ]]; then
+    set -x
+  fi
+fi
+
 G="\033[1;32m" # green
 C="\033[1;36m" # cyan
 R="\033[1;31m" # red
@@ -25,6 +37,8 @@ if ! [ -f "$versions" ]; then
 else
   echo -e "$up Located versions file at: $versions"
 fi
+
+set -u
 
 versions_clean="$versions.clean"
 versions_tmp="$versions.tmp"
@@ -78,7 +92,7 @@ while read -r line; do
   latest_version=$(echo "$response" | jq -r .tag_name)
   if [[ -z $latest_version ]]; then
     echo -e "$warn Could not get the latest version value for : $pref."
-    if [[ $2 == "-debug" ]]; then
+    if [[ $debug_mode == "y" ]]; then
       echo -e "$debug API response: $response"
     fi
   else
@@ -92,7 +106,7 @@ while read -r line; do
         url=$(echo "$response" | jq "$filter" | jq -r .browser_download_url)
         if [[ -z $url ]]; then
           echo -e "$warn Could not find download URL for: $pref"
-          if [[ $2 == "-debug" ]]; then
+          if [[ $debug_mode == "y" ]]; then
             echo -e "$debug API response: $response"
           fi
         else
