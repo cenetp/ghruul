@@ -119,7 +119,7 @@ while read -r line; do
             segments=($(echo "$url" | tr "/" " "))
             install_file=${segments[-1]} # last element = downloaded file name
             if [[ "$type" == "deb" ]]; then
-              apt install -y ./"$install_file"
+              apt-get install -y ./"$install_file"
             elif [[ "$type" == "rpm" ]]; then
               dnf install -y ./"$install_file"
             fi
