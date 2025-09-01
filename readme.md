@@ -8,6 +8,8 @@ of the [latest release API](https://docs.github.com/de/rest/releases/releases?ap
 Some packages are published via GitHub only or have a newer release version than elsewhere (distribution repositories, Flatpak etc.). 
 This utility helps to install and update them in a convenient way, using the established software management tools of Linux distributions.
 
+![all packages](./media/all.gif)
+
 ## Which package formats are supported
 
 Currently, only `.deb`@`apt` and `.rpm`@`dnf` package installations are supported.
@@ -60,6 +62,8 @@ e.g. `linux_amd64.deb` for the [k9s releases](https://github.com/derailed/k9s/re
 In order to install the package that was published in the format other than the supported ones, you can write a custom script 
 that downloads and installs or updates this package using other tools, such as `tar` or `unzip`. Ghruul will detect the 
 non-supported format, inform you about the availability of a new version, and run the custom script.
+
+![custom script](./media/custom.gif)
 
 An example of a custom script applied to the releases of the repository [yt-dlp](https://github.com/yt-dlp/yt-dlp) 
 (that does not publish `deb` or `rpm` formats) is available in the directory `custom_scripts`.
