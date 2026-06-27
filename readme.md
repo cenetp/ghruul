@@ -68,6 +68,16 @@ non-supported format, inform you about the availability of a new version, and ru
 An example of a custom script applied to the releases of the repository [yt-dlp](https://github.com/yt-dlp/yt-dlp) 
 (that does not publish `deb` or `rpm` formats) is available in the directory `custom_scripts`.
 
+### Custom script options
+
+Since **v0.2** ([fb4f361](https://github.com/cenetp/ghruul/commit/fb4f3613927e531c4760885a6e5a2f541d170105)) it is possible to apply options to the custom scripts. If some additional data is required by the script for the update process, then such data can be appended to the script path using the delimiter `%`.
+
+If you require the latest version in the custom script, you can use the placeholder `+latest` which will always point to the latest version detected by Ghruul.
+
+In the following example, the latest version string and the distribution type are appended as options to the custom script path:
+
+    /home/user/ghruul/custom_scripts/script.sh%+latest%debian
+
 ## Problems & troubleshooting
 
 First of all, you can set the `-debug` switch as the **last** argument to the Ghruul script, if you encounter update problems 
