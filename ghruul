@@ -132,10 +132,28 @@ while read -r line; do
           fi
         fi
       else
-        echo -e "$up \033[1mExecuting custom script:\033[0m $custom_script" && sh -c "$custom_script"
+        IFS="%" read -r -a parts <<< "$custom_script"
+        custom_script_path="${parts[0]}"
+        echo -e "\033[1mExecuting custom script:\033[0m $custom_script_path"
+        length=${#parts[@]}
+        if [ "1" == "$length" ]; then
+          sh -c "$custom_script_path"
+        else
+          # shellcheck disable=SC2206
+          options=(${parts[@]/$custom_script_path})
+          args=""
+          for option in "${options[@]}"; do
+            echo -e "\033[1mUsing option:\033[0m $option"
+            if [ "+latest" == "$option" ]; then
+              option=$latest_version
+            fi
+            args="$args $option"
+          done
+          sh -c "$custom_script_path$args"
+        fi
         # shellcheck disable=SC2181
         if [[ "$?" != "0" ]]; then
-          echo -e "$warn Could not run custom script $custom_script."
+          echo -e "$warn Could not run custom script $custom_script_path."
         else
           status="success"
         fi
